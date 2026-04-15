@@ -1,11 +1,9 @@
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, gaussian_kde
 
 class BayesParametric:
     """
     Klasyfikator Bayesa z estymatorem parametrycznym (rozkład normalny).
-    Estymuje μ i Σ (pełna macierz kowariancji) z danych uczących.
-    Decyzja: argmax_k  log P(k) + log N(x | μ_k, Σ_k)
     """
 
     def fit(self, X, y):
@@ -40,8 +38,6 @@ class BayesParametric:
 class BayesParzen:
     """
     Klasyfikator Bayesa z estymatorem nieparametrycznym - okna Parzena.
-    Jądro: wielowymiarowy Gauss  K(u) = (2π)^{-d/2} exp(-||u||²/2)
-    Gęstość: p(x) = (1/n) Σ_i (1/h^d) K((x - x_i)/h)
     Parametr h (bandwidth) steruje wygładzeniem estymatora.
     """
 
@@ -52,36 +48,22 @@ class BayesParzen:
         self.classes_    = np.unique(y)
         self.priors_     = {}
         self.train_data_ = {}
+        self.kdes_       = {}
         for c in self.classes_:
             Xc = X[y == c]
             self.priors_[c]     = len(Xc) / len(X)
             self.train_data_[c] = Xc
+            # KDE Gaussa dla klasy c (dane w formacie (d, n_samples))
+            self.kdes_[c]       = gaussian_kde(Xc.T, bw_method=self.h)
         return self
 
-    def _parzen_density(self, x, X_train):
-        """KDE z jądrem gaussowskim dla punktu x."""
-        n, d = X_train.shape
-        diff = (x - X_train) / self.h
-        log_kernels = -0.5 * np.sum(diff**2, axis=1)
-        lmax = log_kernels.max()
-        log_density = (lmax
-                       + np.log(np.exp(log_kernels - lmax).sum())
-                       - np.log(n)
-                       - d * np.log(self.h)
-                       - 0.5 * d * np.log(2*np.pi))
-        return log_density
-
     def predict_proba(self, X):
-        log_posts = np.zeros((len(X), len(self.classes_)))
+        scores = np.zeros((len(X), len(self.classes_)))
         for i, c in enumerate(self.classes_):
-            log_prior = np.log(self.priors_[c])
-            log_posts[:, i] = np.array([
-                log_prior + self._parzen_density(x, self.train_data_[c])
-                for x in X
-            ])
-        log_posts -= log_posts.max(axis=1, keepdims=True)
-        probs = np.exp(log_posts)
-        probs /= probs.sum(axis=1, keepdims=True)
+            prior = self.priors_[c]
+            densities = self.kdes_[c](X.T)
+            scores[:, i] = prior * densities
+        probs = scores / scores.sum(axis=1, keepdims=True)
         return probs
 
     def predict(self, X):

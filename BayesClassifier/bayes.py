@@ -24,16 +24,13 @@ class BayesParametric:
         return self
 
     def predict_proba(self, X):
-        log_posts = np.zeros((len(X), len(self.classes_)))
+        scores = np.zeros((len(X), len(self.classes_)))
         for i, c in enumerate(self.classes_):
-            log_prior = np.log(self.priors_[c])
-            log_posts[:, i] = np.array([
-                log_prior + norm.logpdf(x, loc=self.means_[c], scale=self.stds_[c]).sum()
-                for x in X
-            ])
-        log_posts -= log_posts.max(axis=1, keepdims=True)
-        probs = np.exp(log_posts)
-        probs /= probs.sum(axis=1, keepdims=True)
+            prior = self.priors_[c]
+            pdf_vals = norm.pdf(X, loc=self.means_[c], scale=self.stds_[c])
+            class_likelihood = pdf_vals.prod(axis=1)
+            scores[:, i] = prior * class_likelihood
+        probs = scores / scores.sum(axis=1, keepdims=True)
         return probs
 
     def predict(self, X):

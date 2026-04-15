@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import norm
 
 class BayesParametric:
     """
@@ -22,20 +23,12 @@ class BayesParametric:
             self.stds_[c]   = Xc.std(axis=0, ddof=1)
         return self
 
-    def _log_likelihood(self, x, mean, cov):
-        """Log-gęstość wielowymiarowego rozkładu normalnego."""
-        d    = len(x)
-        diff = x - mean
-        _, logdet = np.linalg.slogdet(cov)
-        mahal     = diff @ np.linalg.inv(cov) @ diff
-        return -0.5 * (d * np.log(2*np.pi) + logdet + mahal)
-
     def predict_proba(self, X):
         log_posts = np.zeros((len(X), len(self.classes_)))
         for i, c in enumerate(self.classes_):
             log_prior = np.log(self.priors_[c])
             log_posts[:, i] = np.array([
-                log_prior + self._log_likelihood(x, self.means_[c], self.covs_[c])
+                log_prior + norm.logpdf(x, loc=self.means_[c], scale=self.stds_[c]).sum()
                 for x in X
             ])
         log_posts -= log_posts.max(axis=1, keepdims=True)

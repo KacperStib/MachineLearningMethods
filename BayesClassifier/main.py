@@ -180,7 +180,7 @@ X_train, y_train, X_test, y_test = load_microarray(MAT_PATH)
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. Wybor cech wskaznikiem Fishera – top-N genow
  
-N_FEATS_LIST  = [5, 10, 20, 50]
+N_FEATS_LIST  = [5, 10, 20, 30]
 BANDWIDTHS    = [0.3, 0.5, 1.0, 2.0, 4.0]
  
 summary = []   # do tabeli zbiorczej i wykresu
@@ -193,11 +193,11 @@ for N_FEAT in N_FEATS_LIST:
     print(f" Top-{N_FEAT} genow (wskaznik Fishera)")
     print(f" Indeksy genow: {top_idx[:5].tolist()} ...")
     print(f"{'═'*60}")
- 
+    
     # -- Parametryczny --
     clf_p = BayesParametric().fit(X_tr, y_train)
     m_p   = print_report(f"Parametryczny – top-{N_FEAT} genow", y_test, clf_p.predict(X_te))
- 
+    
     # -- Parzen: wszystkie h, zapisz najlepsze --
     print(f"\n  Parzen – przeglad h:")
     print(f"  {'h':>6}  {'Train acc':>10}  {'Test acc':>10}")

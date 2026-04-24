@@ -9,7 +9,7 @@ from data import (generate_data, generate_data_gaussian,
 from bayes     import BayesParametric, BayesParzen
 from helpers   import (accuracy, print_report, compare_results_table,
                        plot_dataset, plot_decision_boundary, classification_metrics,
-                       plot_features_pairwise, plot_accuracy_vs_bandwidth)
+                       plot_features_pairwise, plot_accuracy_vs_bandwidth, confusion_matrix_2x2)
 
 output_dir = "img"
 if not os.path.exists(output_dir):
@@ -30,11 +30,11 @@ print(f"Zbiór testowy - A1: {(y_test ==0).sum():3d}, A2: {(y_test ==1).sum():3d
 
 # ── Wykres 1: zbiory danych ───────────────────────────────────────────────
 fig, axes = plt.subplots(1, 2, figsize=(13, 5.5), constrained_layout=True)
-fig.suptitle("Syntetyczny zbiór danych - klasyfikator Bayesa",
+fig.suptitle("Syntetyczny zbiór danych",
              fontsize=15, fontweight="bold", y=1.02)
 plot_dataset(axes, X_train, y_train, X_test, y_test, mu1, Sigma1, mu2, Sigma2)
 save_plot("bayes_zbior_danych.png")
-plt.show()
+plt.show(block=False)
 
 # Zadanie 2
 # ── Wariant A: parametryczny 
@@ -56,7 +56,7 @@ plot_decision_boundary(axes[0], clf_param, X_train, y_train,
 plot_decision_boundary(axes[1], clf_param, X_test, y_test,
     f"Zbiór testowy  |  acc = {accuracy(y_test, y_pred_param_test)*100:.1f}%")
 save_plot("bayes_param.png")
-plt.show()
+plt.show(block=False)
 
 
 # ── Wariant B: okna Parzena 
@@ -77,17 +77,17 @@ for h in bandwidths:
 
 # Granice decyzyjne dla wybranych h
 selected_h = [0.1, 0.5, 1.0, 4.0]
-fig, axes  = plt.subplots(2, 4, figsize=(18, 9), constrained_layout=True)
+fig, axes  = plt.subplots(4, 2, figsize=(9, 18), constrained_layout=True)
 fig.suptitle("Klasyfikator Bayesa - okna Parzena: wpływ szerokości okna h",
              fontsize=13, fontweight="bold")
 for col, h in enumerate(selected_h):
     acc_tr, acc_te, clf_p = parzen_results[h]
-    plot_decision_boundary(axes[0, col], clf_p, X_train, y_train,
+    plot_decision_boundary(axes[col, 0], clf_p, X_train, y_train,
         f"Uczący   h={h}  |  {acc_tr*100:.1f}%")
-    plot_decision_boundary(axes[1, col], clf_p, X_test, y_test,
+    plot_decision_boundary(axes[col, 1], clf_p, X_test, y_test,
         f"Testowy  h={h}  |  {acc_te*100:.1f}%")
 save_plot("bayes_parzen_granice.png")
-plt.show()
+plt.show(block=False)
 
 # Wykres dokładności vs h
 fig = plot_accuracy_vs_bandwidth(
@@ -96,9 +96,10 @@ fig = plot_accuracy_vs_bandwidth(
     accuracy(y_test,  y_pred_param_test)
 )
 save_plot("bayes_parzen_accuracy.png")
-plt.show()
+plt.show(block=False)
 
-# Zadanie 3 - 5 cech
+## Zadanie 3 - 5 cech
+
 # Zbior Gaussowski
 print("\n\n" + "="*52)
 print(" ZBIOR 5-CECHOWY – GAUSSOWSKI (rozklady normalne)")
@@ -111,7 +112,7 @@ Xg_tr, yg_tr, Xg_te, yg_te = train_test_split(Xg, yg, train_size=100)
 fig = plot_features_pairwise(Xg, yg, n_show=5,
     title="Zbior gaussowski – 5 cech (diagonal: histogram, reszta: scatter)")
 save_plot("gaussian_5_cech.png")
-plt.show()
+plt.show(block=False)
  
 # Parametryczny
 clf_g_param = BayesParametric().fit(Xg_tr, yg_tr)
@@ -131,7 +132,6 @@ for h in [0.3, 0.5, 1.0, 2.0]:
  
 mg_parzen = print_report(f"Gaussian 5D – Parzen h={best_h_g} (najlepsze) – TESTOWY",
                           yg_te, best_clf_g.predict(Xg_te))
-
 # Zbior nieGaussowski
 print("\n\n" + "="*52)
 print(" ZBIOR 5-CECHOWY – NIEgaussowski (mieszanina + jednostajny)")
@@ -144,7 +144,7 @@ Xn_tr, yn_tr, Xn_te, yn_te = train_test_split(Xn, yn, train_size=100)
 fig = plot_features_pairwise(Xn, yn, n_show=5,
     title="Zbior nieGaussowski – 5 cech (diagonal: histogram, reszta: scatter)")
 save_plot("nongaussian_5_cech.png")
-plt.show()
+plt.show(block=False)
  
 # Parametryczny
 clf_n_param = BayesParametric().fit(Xn_tr, yn_tr)
@@ -164,7 +164,59 @@ for h in [0.3, 0.5, 1.0, 2.0]:
  
 mn_parzen = print_report(f"NieGaussowski 5D – Parzen h={best_h_n} (najlepsze) – TESTOWY",
                           yn_te, best_clf_n.predict(Xn_te))
- 
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
+fig.suptitle("Macierze pomyłek – Zbiór Gaussowski 5D", fontsize=12, fontweight="bold")
+
+# Dane do pętli: (tytuł, model)
+models_to_plot = [
+    ("Parametryczny", clf_g_param),
+    (f"Parzen h={best_h_g}", best_clf_g)
+]
+
+for ax, (name, model) in zip(axes, models_to_plot):
+    y_pred = model.predict(Xg_te)
+    cm = confusion_matrix_2x2(yg_te, y_pred)
+    im = ax.imshow(cm, cmap="Greens", vmin=0)
+    ax.set_title(f"{name}\nACC = {accuracy(yg_te, y_pred)*100:.1f}%")
+    for i in range(2):
+        for j in range(2):
+            ax.text(j, i, str(cm[i,j]), ha="center", va="center", fontweight="bold")
+
+save_plot("confusion_gauss_5d.png")
+plt.show(block=False)
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
+fig.suptitle("Macierze pomyłek – Zbiór Nie-Gaussowski 5D", fontsize=12, fontweight="bold")
+
+# Modele do porównania
+models_to_plot = [
+    ("Parametryczny (Nie-Gauss)", clf_n_param),
+    (f"Parzen h={best_h_n} (Nie-Gauss)", best_clf_n)
+]
+
+for ax, (name, model) in zip(axes, models_to_plot):
+    y_pred = model.predict(Xn_te)
+    cm = confusion_matrix_2x2(yn_te, y_pred)
+    
+    # Rysowanie macierzy (możesz użyć Blues lub Oranges dla odróżnienia)
+    im = ax.imshow(cm, cmap="Oranges", vmin=0)
+    ax.set_title(f"{name}\nACC = {accuracy(yn_te, y_pred)*100:.1f}%")
+    
+    # Dodawanie liczb do kratek
+    for i in range(2):
+        for j in range(2):
+            ax.text(j, i, str(cm[i,j]), ha="center", va="center", 
+                    fontsize=14, fontweight="bold",
+                    color="white" if cm[i,j] > cm.max()/2 else "black")
+            
+    ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
+    ax.set_xticklabels(["Pred A1", "Pred A2"])
+    ax.set_yticklabels(["True A1", "True A2"])
+
+save_plot("confusion_nongauss_5d.png")
+plt.show(block=False)
+
 # ZADANIE 4 - realne dane
 # ── sciezka do pliku 
 MAT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dane7.mat")
@@ -262,7 +314,7 @@ ax.set_ylim(40, 108)
 ax.grid(True, linestyle="--", alpha=0.4)
 ax.legend(fontsize=10, framealpha=0.9)
 save_plot("microarray_acc_vs_genes.png")
-plt.show()
+plt.show(block=False)
  
  
 # --- Wykres 2: macierze pomylek dla najlepszego N (top-10) ---
@@ -282,7 +334,6 @@ fig.suptitle("Macierze pomylek – zbior testowy (mikromacierze DNA)",
              fontsize=12, fontweight="bold")
  
 for ax, (title, y_pred) in zip(axes, preds.items()):
-    from helpers import confusion_matrix_2x2
     cm  = confusion_matrix_2x2(y_test, y_pred)
     acc = accuracy(y_test, y_pred)
     im  = ax.imshow(cm, cmap="Blues", vmin=0)
@@ -298,7 +349,7 @@ for ax, (title, y_pred) in zip(axes, preds.items()):
     plt.colorbar(im, ax=ax, fraction=0.046)
  
 save_plot("microarray_confusion.png")
-plt.show()
+plt.show(block=False)
  
 # --- Wykres 3: rozklady top-2 genow dla obu klas ---
 X_tr2, X_te2, top2_idx, _ = select_features_fisher(
@@ -321,4 +372,4 @@ for i, ax in enumerate(axes):
     ax.grid(True, linestyle="--", alpha=0.3)
  
 save_plot("microarray_top2_genes.png")
-plt.show()
+plt.show(block=False)

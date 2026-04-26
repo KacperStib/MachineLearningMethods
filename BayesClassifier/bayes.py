@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.stats import norm, gaussian_kde
+from scipy.stats import norm
+from sklearn.neighbors import KernelDensity
 
 class BayesParametric:
     """
@@ -53,16 +54,20 @@ class BayesParzen:
             Xc = X[y == c]
             self.priors_[c]     = len(Xc) / len(X)
             self.train_data_[c] = Xc
-            # KDE Gaussa dla klasy c (dane w formacie (d, n_samples))
-            self.kdes_[c]       = gaussian_kde(Xc.T, bw_method=self.h)
+            # KDE Gaussa dla klasy c (KernelDensity przyjmuje dane jako (n_samples, n_features))
+            self.kdes_[c]       = KernelDensity(kernel="gaussian", bandwidth=self.h).fit(Xc)
         return self
 
     def predict_proba(self, X):
-        scores = np.zeros((len(X), len(self.classes_)))
+        log_scores = np.zeros((len(X), len(self.classes_)))
         for i, c in enumerate(self.classes_):
             prior = self.priors_[c]
-            densities = self.kdes_[c](X.T)
-            scores[:, i] = prior * densities
+            log_prior = np.log(prior + 1e-300)
+            log_density = self.kdes_[c].score_samples(X)
+            log_scores[:, i] = log_prior + log_density
+
+        max_log = np.max(log_scores, axis=1, keepdims=True)
+        scores = np.exp(log_scores - max_log)
         probs = scores / scores.sum(axis=1, keepdims=True)
         return probs
 

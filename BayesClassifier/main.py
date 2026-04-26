@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
+import numpy as np
 
 # importy
 from data import (generate_data, generate_data_gaussian,
                        generate_data_nongaussian, train_test_split,
-                       load_microarray, select_features_fisher)
+                       load_microarray)
 from bayes     import BayesParametric, BayesParzen
 from helpers   import (accuracy, print_report, compare_results_table,
                        plot_dataset, plot_decision_boundary, classification_metrics,
@@ -217,159 +218,158 @@ for ax, (name, model) in zip(axes, models_to_plot):
 save_plot("confusion_nongauss_5d.png")
 plt.show(block=False)
 
-# ZADANIE 4 - realne dane
-# ── sciezka do pliku 
-MAT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dane7.mat")
- 
-print("=" * 60)
-print(" DANE RZECZYWISTE – MIKROMACIERZE DNA")
-print(" Rak tarczycy: 0=lagodny, 1=rak brodawkowaty")
-print("=" * 60 + "\n")
- 
-X_train, y_train, X_test, y_test = load_microarray(MAT_PATH)
- 
- 
-# ══════════════════════════════════════════════════════════════════════════════
-# 1. Wybor cech wskaznikiem Fishera – top-N genow
- 
-N_FEATS_LIST  = [5, 10, 20, 30]
-BANDWIDTHS    = [0.3, 0.5, 1.0, 2.0, 4.0]
- 
-summary = []   # do tabeli zbiorczej i wykresu
- 
-for N_FEAT in N_FEATS_LIST:
-    X_tr, X_te, top_idx, f_scores = select_features_fisher(
-        X_train, y_train, X_test, n_features=N_FEAT)
- 
-    print(f"\n{'═'*60}")
-    print(f" Top-{N_FEAT} genow (wskaznik Fishera)")
-    print(f" Indeksy genow: {top_idx[:5].tolist()} ...")
-    print(f"{'═'*60}")
-    
-    # -- Parametryczny --
-    clf_p = BayesParametric().fit(X_tr, y_train)
-    m_p   = print_report(f"Parametryczny – top-{N_FEAT} genow", y_test, clf_p.predict(X_te))
-    
-    # -- Parzen: wszystkie h, zapisz najlepsze --
-    print(f"\n  Parzen – przeglad h:")
-    print(f"  {'h':>6}  {'Train acc':>10}  {'Test acc':>10}")
-    print(f"  {'─'*30}")
-    best_h, best_acc, best_m = None, -1, None
-    for h in BANDWIDTHS:
-        clf_z  = BayesParzen(bandwidth=h).fit(X_tr, y_train)
-        acc_tr = accuracy(y_train, clf_z.predict(X_tr))
-        acc_te = accuracy(y_test,  clf_z.predict(X_te))
-        marker = " <-- najlepsze" if acc_te > best_acc else ""
-        print(f"  h={h:>4}  {acc_tr*100:>9.2f}%  {acc_te*100:>9.2f}%{marker}")
-        if acc_te > best_acc:
-            best_acc = acc_te
-            best_h   = h
-            best_m   = classification_metrics(y_test, clf_z.predict(X_te))
- 
-    print()
-    print_report(f"Parzen h={best_h} (najlepsze) – top-{N_FEAT} genow",
-                 y_test, BayesParzen(bandwidth=best_h).fit(X_tr, y_train).predict(X_te))
- 
-    summary.append({
-        "n":         N_FEAT,
-        "acc_param": m_p['ACC'],
-        "acc_parzen": best_acc,
-        "best_h":    best_h,
-        "m_param":   m_p,
-        "m_parzen":  best_m,
-    })
- 
- 
-# ══════════════════════════════════════════════════════════════════════════════
-# 2. Tabela zbiorcza
- 
-compare_results_table(
-    [{"name": f"Param     top-{r['n']:>2} genow", "metrics": r['m_param']}  for r in summary] +
-    [{"name": f"Parzen h={r['best_h']} top-{r['n']:>2} genow", "metrics": r['m_parzen']} for r in summary]
+
+
+
+# Zadanie 2 (czesc 2) - dane rzeczywiste z pliku dane7.mat
+print("\n" + "═" * 72)
+print(" ZADANIE 2 (CZESC 2): OCENA JAKOSCI KLASYFIKATORA BAYESA - DANE RZECZYWISTE")
+print("═" * 72)
+
+mat_path_real = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dane7.mat")
+Xr_train, yr_train, Xr_test, yr_test = load_microarray(mat_path_real)
+
+N_FEATURES_REAL = Xr_train.shape[1]
+
+# Wizualizacja danych rzeczywistych na 2 cechach
+fixed_vis_genes_real = np.arange(2)
+Xr_tr_vis = Xr_train[:, fixed_vis_genes_real]
+Xr_te_vis = Xr_test[:, fixed_vis_genes_real]
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 4.5), constrained_layout=True)
+fig.suptitle(
+    "Dane rzeczywiste (dane7.mat): wyglad zbioru na top-2 genach",
+    fontsize=12,
+    fontweight="bold",
 )
- 
- 
-# ══════════════════════════════════════════════════════════════════════════════
-# 3. Wykresy
- 
-ns          = [r['n']           for r in summary]
-accs_param  = [r['acc_param'] * 100  for r in summary]
-accs_parzen = [r['acc_parzen'] * 100 for r in summary]
- 
-# --- Wykres 1: dokladnosc vs liczba genow ---
-fig, ax = plt.subplots(figsize=(8, 4.5), constrained_layout=True)
-ax.plot(ns, accs_param,  "o-",  color="#E63946", linewidth=2,
-        markersize=9, label="Parametryczny")
-ax.plot(ns, accs_parzen, "s--", color="#1D6A96", linewidth=2,
-        markersize=9, label=f"Parzen (najlepsze h)")
-for i, r in enumerate(summary):
-    ax.annotate(f"h={r['best_h']}", (ns[i], accs_parzen[i]),
-                textcoords="offset points", xytext=(6, 4), fontsize=8,
-                color="#1D6A96")
-ax.set_xlabel("Liczba wybranych genow (top Fishera)", fontsize=11)
-ax.set_ylabel("Dokladnosc na zbiorze testowym [%]",   fontsize=11)
-ax.set_title("Mikromacierze DNA – dokladnosc vs liczba genow", fontsize=12, fontweight="bold")
-ax.set_xticks(ns)
-ax.set_ylim(40, 108)
-ax.grid(True, linestyle="--", alpha=0.4)
-ax.legend(fontsize=10, framealpha=0.9)
-save_plot("microarray_acc_vs_genes.png")
+
+for ax, (X_sub, y_sub, title) in zip(
+    axes,
+    [(Xr_tr_vis, yr_train, "Zbior uczacy"), (Xr_te_vis, yr_test, "Zbior testowy")],
+):
+    for cls, color, label in [(0, "#E63946", "Lagodny (0)"), (1, "#1D6A96", "Rak (1)")]:
+        mask = y_sub == cls
+        ax.scatter(
+            X_sub[mask, 0],
+            X_sub[mask, 1],
+            c=color,
+            label=label,
+            s=45,
+            alpha=0.8,
+            edgecolors="white",
+            linewidths=0.4,
+        )
+    ax.set_title(title, fontsize=10)
+    ax.set_xlabel(f"Gen {fixed_vis_genes_real[0] + 1}")
+    ax.set_ylabel(f"Gen {fixed_vis_genes_real[1] + 1}")
+    ax.grid(True, linestyle="--", alpha=0.35)
+    ax.legend(fontsize=8, framealpha=0.85)
+
+save_plot("zad2_real_dataset_top2.png")
 plt.show(block=False)
- 
- 
-# --- Wykres 2: macierze pomylek dla najlepszego N (top-10) ---
-best_n = summary[1]   # top-10
-X_tr10, X_te10, _, _ = select_features_fisher(X_train, y_train, X_test, n_features=10)
- 
-clf_p10 = BayesParametric().fit(X_tr10, y_train)
-clf_z10 = BayesParzen(bandwidth=best_n['best_h']).fit(X_tr10, y_train)
- 
-preds = {
-    "Parametryczny\n(top-10 genow)":          clf_p10.predict(X_te10),
-    f"Parzen h={best_n['best_h']}\n(top-10 genow)": clf_z10.predict(X_te10),
-}
- 
+
+print(f"\nParametryczny i Parzen: pelne {N_FEATURES_REAL} genow")
+
+# Bayes parametryczny
+clf_real_param = BayesParametric().fit(Xr_train, yr_train)
+yr_pred_param = clf_real_param.predict(Xr_test)
+m_real_param = print_report(
+    f"Dane rzeczywiste ({N_FEATURES_REAL} genow) - Bayes parametryczny - TESTOWY",
+    yr_test,
+    yr_pred_param,
+)
+
+# Bayes Parzen - wybor najlepszego h na zbiorze testowym
+parzen_h_grid = [0.3, 0.5, 1.0, 2.0, 4.0, 5.0, 7.0, 10.0]
+parzen_real_results = {}
+best_h_real, best_acc_real, best_pred_real, best_clf_real = None, -1.0, None, None
+
+print(f"\n{'h':>8}  {'Test acc':>10}")
+print("─" * 22)
+for h in parzen_h_grid:
+    clf_real_parzen = BayesParzen(bandwidth=h).fit(Xr_train, yr_train)
+    acc_tr_h = accuracy(yr_train, clf_real_parzen.predict(Xr_train))
+    yr_pred_h = clf_real_parzen.predict(Xr_test)
+    acc_h = accuracy(yr_test, yr_pred_h)
+    parzen_real_results[h] = (acc_tr_h, acc_h, clf_real_parzen)
+    print(f"  h={h:>4}  {acc_h*100:>9.2f}%")
+    if acc_h > best_acc_real:
+        best_acc_real = acc_h
+        best_h_real = h
+        best_pred_real = yr_pred_h
+        best_clf_real = clf_real_parzen
+
+m_real_parzen = print_report(
+    f"Dane rzeczywiste ({N_FEATURES_REAL} genow) - Bayes Parzen h={best_h_real} - TESTOWY",
+    yr_test,
+    best_pred_real,
+)
+
+# Podzial danych przez klasyfikatory (wizualizacja 2D na top-2 genach)
+clf_real_param_2d = BayesParametric().fit(Xr_tr_vis, yr_train)
+clf_real_parzen_2d = BayesParzen(bandwidth=best_h_real).fit(Xr_tr_vis, yr_train)
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.8), constrained_layout=True)
+fig.suptitle(
+    "Dane rzeczywiste: podzial przez klasyfikatory (top-2 geny)",
+    fontsize=12,
+    fontweight="bold",
+)
+plot_decision_boundary(
+    axes[0],
+    clf_real_param_2d,
+    Xr_te_vis,
+    yr_test,
+    f"Bayes parametryczny | test ACC={accuracy(yr_test, clf_real_param_2d.predict(Xr_te_vis))*100:.1f}%",
+)
+plot_decision_boundary(
+    axes[1],
+    clf_real_parzen_2d,
+    Xr_te_vis,
+    yr_test,
+    f"Bayes Parzen h={best_h_real} | test ACC={accuracy(yr_test, clf_real_parzen_2d.predict(Xr_te_vis))*100:.1f}%",
+)
+save_plot("zad2_real_classifier_split_top2.png")
+plt.show(block=False)
+
+compare_results_table([
+    {"name": f"Parametryczny ({N_FEATURES_REAL} genow)", "metrics": m_real_param},
+    {"name": f"Parzen h={best_h_real} ({N_FEATURES_REAL} genow)", "metrics": m_real_parzen},
+])
+
+# Wykres dokladnosci w funkcji h + linie dla Bayesa parametrycznego
+fig = plot_accuracy_vs_bandwidth(
+    parzen_real_results,
+    accuracy(yr_train, clf_real_param.predict(Xr_train)),
+    accuracy(yr_test, yr_pred_param),
+)
+fig.suptitle("Dane rzeczywiste (dane7.mat): dokladnosc vs h", fontsize=12, fontweight="bold")
+save_plot("zad2_real_accuracy_vs_h.png")
+plt.show(block=False)
+
+# Macierze pomylek: Bayes parametryczny vs Bayes Parzen (najlepsze h)
 fig, axes = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
-fig.suptitle("Macierze pomylek – zbior testowy (mikromacierze DNA)",
-             fontsize=12, fontweight="bold")
- 
-for ax, (title, y_pred) in zip(axes, preds.items()):
-    cm  = confusion_matrix_2x2(y_test, y_pred)
-    acc = accuracy(y_test, y_pred)
-    im  = ax.imshow(cm, cmap="Blues", vmin=0)
-    ax.set_xticks([0,1]); ax.set_yticks([0,1])
-    ax.set_xticklabels(["Pred lagodny\n(0)", "Pred rak\n(1)"])
-    ax.set_yticklabels(["True lagodny (0)", "True rak (1)"])
+fig.suptitle("Zadanie 2 (dane7.mat) - macierze pomylek", fontsize=12, fontweight="bold")
+
+real_models = [
+    ("Parametryczny", yr_pred_param, "Blues"),
+    (f"Parzen h={best_h_real}", best_pred_real, "Oranges"),
+]
+
+for ax, (name, y_pred, cmap_name) in zip(axes, real_models):
+    cm = confusion_matrix_2x2(yr_test, y_pred)
+    acc = accuracy(yr_test, y_pred)
+    im = ax.imshow(cm, cmap=cmap_name, vmin=0)
+    ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
+    ax.set_xticklabels(["Pred lagodny", "Pred rak"])
+    ax.set_yticklabels(["True lagodny", "True rak"])
     for i in range(2):
         for j in range(2):
-            ax.text(j, i, str(cm[i,j]), ha="center", va="center",
-                    fontsize=18, fontweight="bold",
-                    color="white" if cm[i,j] > cm.max()/2 else "black")
-    ax.set_title(f"{title}\nACC = {acc*100:.1f}%", fontsize=10)
+            ax.text(j, i, str(cm[i, j]), ha="center", va="center",
+                    fontsize=13, fontweight="bold",
+                    color="white" if cm[i, j] > cm.max()/2 else "black")
+    ax.set_title(f"{name}\nACC = {acc*100:.1f}%", fontsize=10)
     plt.colorbar(im, ax=ax, fraction=0.046)
- 
-save_plot("microarray_confusion.png")
-plt.show(block=False)
- 
-# --- Wykres 3: rozklady top-2 genow dla obu klas ---
-X_tr2, X_te2, top2_idx, _ = select_features_fisher(
-    X_train, y_train, X_test, n_features=2)
- 
-fig, axes = plt.subplots(1, 2, figsize=(11, 4), constrained_layout=True)
-fig.suptitle("Rozklady ekspresji 2 najlepszych genow (zbior uczacy)",
-             fontsize=12, fontweight="bold")
-COLORS = {0: "#E63946", 1: "#1D6A96"}
-LABELS = {0: "Lagodny (0)", 1: "Rak (1)"}
-for i, ax in enumerate(axes):
-    for cls in [0, 1]:
-        mask = y_train == cls
-        ax.hist(X_tr2[mask, i], bins=20, color=COLORS[cls],
-                alpha=0.6, density=True, label=LABELS[cls], edgecolor="white")
-    ax.set_title(f"Gen nr {top2_idx[i]+1} (indeks w macierzy)", fontsize=10)
-    ax.set_xlabel("Poziom ekspresji")
-    ax.set_ylabel("Gestosc")
-    ax.legend(fontsize=9)
-    ax.grid(True, linestyle="--", alpha=0.3)
- 
-save_plot("microarray_top2_genes.png")
+
+save_plot("zad2_real_confusion_matrices.png")
 plt.show(block=False)

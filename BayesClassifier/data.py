@@ -118,23 +118,3 @@ def load_microarray(mat_path):
  
     return X_train, y_train, X_test, y_test
  
- 
-def select_features_fisher(X_train, y_train, X_test, n_features=20):
-    """
-    Wybor n_features najlepszych genow wskaznikiem Fishera:
-        F(j) = (mu1_j - mu0_j)^2 / (var0_j + var1_j + eps)
-    Wysoki F → gen dobrze separuje klasy.
-    """
-    mask0 = y_train == 0
-    mask1 = y_train == 1
- 
-    mu0  = X_train[mask0].mean(axis=0)
-    mu1  = X_train[mask1].mean(axis=0)
-    var0 = X_train[mask0].var(axis=0)
-    var1 = X_train[mask1].var(axis=0)
- 
-    fisher  = (mu1 - mu0)**2 / (var0 + var1 + 1e-10)
-    top_idx = np.argsort(fisher)[::-1][:n_features]
- 
-    return X_train[:, top_idx], X_test[:, top_idx], top_idx, fisher[top_idx]
- 

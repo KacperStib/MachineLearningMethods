@@ -61,7 +61,7 @@ plt.show(block=False)
 
 
 # ── Wariant B: okna Parzena 
-bandwidths     = [0.1, 0.3, 0.5, 1.0, 2.0, 4.0]
+bandwidths     = [0.1, 0.3, 0.5, 1.0, 2.0, 4.0 ,8.0]
 parzen_results = {}
 
 print("\n\n" + "═"*50)
@@ -77,8 +77,8 @@ for h in bandwidths:
     print(f"  h={h:>4}  {acc_tr*100:>9.2f}%  {acc_te*100:>9.2f}%")
 
 # Granice decyzyjne dla wybranych h
-selected_h = [0.1, 0.5, 1.0, 4.0]
-fig, axes  = plt.subplots(4, 2, figsize=(9, 18), constrained_layout=True)
+selected_h = [0.1, 0.5, 1.0, 4.0, 8.0]
+fig, axes  = plt.subplots(5, 2, figsize=(9, 18), constrained_layout=True)
 fig.suptitle("Klasyfikator Bayesa - okna Parzena: wpływ szerokości okna h",
              fontsize=13, fontweight="bold")
 for col, h in enumerate(selected_h):
@@ -152,19 +152,15 @@ clf_n_param = BayesParametric().fit(Xn_tr, yn_tr)
 mn_param = print_report("NieGaussowski 5D – Parametryczny – TESTOWY",
                          yn_te, clf_n_param.predict(Xn_te))
  
-# Parzen (kilka h)
-best_h_n, best_acc_n, best_clf_n = None, -1, None
-print(f"\n  {'h':>6}  {'Test acc':>10}")
-print("  " + "-"*20)
-for h in [0.3, 0.5, 1.0, 2.0]:
-    clf_np = BayesParzen(bandwidth=h).fit(Xn_tr, yn_tr)
-    acc_te = accuracy(yn_te, clf_np.predict(Xn_te))
-    print(f"  h={h:>4}  {acc_te*100:>9.2f}%")
-    if acc_te > best_acc_n:
-        best_acc_n, best_h_n, best_clf_n = acc_te, h, clf_np
- 
-mn_parzen = print_report(f"NieGaussowski 5D – Parzen h={best_h_n} (najlepsze) – TESTOWY",
-                          yn_te, best_clf_n.predict(Xn_te))
+# Parzen
+h_fixed = 0.5
+best_clf_n = BayesParzen(bandwidth=h_fixed).fit(Xn_tr, yn_tr)
+acc_te = accuracy(yn_te, best_clf_n.predict(Xn_te))
+
+print(f"\n  Wynik dla h={h_fixed}: {acc_te*100:.2f}%")
+
+mn_parzen = print_report(f"NieGaussowski 5D – Parzen h={h_fixed} – TESTOWY",
+                         yn_te, best_clf_n.predict(Xn_te))
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
 fig.suptitle("Macierze pomyłek – Zbiór Gaussowski 5D", fontsize=12, fontweight="bold")
@@ -172,7 +168,7 @@ fig.suptitle("Macierze pomyłek – Zbiór Gaussowski 5D", fontsize=12, fontweig
 # Dane do pętli: (tytuł, model)
 models_to_plot = [
     ("Parametryczny", clf_g_param),
-    (f"Parzen h={best_h_g}", best_clf_g)
+    (f"Parzen h={h_fixed}", best_clf_g)
 ]
 
 for ax, (name, model) in zip(axes, models_to_plot):
@@ -193,7 +189,7 @@ fig.suptitle("Macierze pomyłek – Zbiór Nie-Gaussowski 5D", fontsize=12, font
 # Modele do porównania
 models_to_plot = [
     ("Parametryczny (Nie-Gauss)", clf_n_param),
-    (f"Parzen h={best_h_n} (Nie-Gauss)", best_clf_n)
+    (f"Parzen h={h_fixed} (Nie-Gauss)", best_clf_n)
 ]
 
 for ax, (name, model) in zip(axes, models_to_plot):

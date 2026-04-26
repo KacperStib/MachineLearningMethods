@@ -23,6 +23,7 @@ class BayesParametric:
         return self
 
     def predict_proba(self, X):
+        # Obliczamy prawdopodobieństwa dla każdej klasy i próbki
         scores = np.zeros((len(X), len(self.classes_)))
         for i, c in enumerate(self.classes_):
             prior = self.priors_[c]
@@ -59,13 +60,14 @@ class BayesParzen:
         return self
 
     def predict_proba(self, X):
+        # Obliczamy log-prawdopodobieństwa dla każdej klasy i próbki
         log_scores = np.zeros((len(X), len(self.classes_)))
         for i, c in enumerate(self.classes_):
             prior = self.priors_[c]
             log_prior = np.log(prior + 1e-300)
             log_density = self.kdes_[c].score_samples(X)
             log_scores[:, i] = log_prior + log_density
-
+            
         max_log = np.max(log_scores, axis=1, keepdims=True)
         scores = np.exp(log_scores - max_log)
         probs = scores / scores.sum(axis=1, keepdims=True)

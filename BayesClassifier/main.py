@@ -282,6 +282,7 @@ best_h_real, best_acc_real, best_pred_real, best_clf_real = None, -1.0, None, No
 
 print(f"\n{'h':>8}  {'Test acc':>10}")
 print("─" * 22)
+# Pętla po różnych wartościach h dla klasyfikatora Parzena
 for h in parzen_h_grid:
     clf_real_parzen = BayesParzen(bandwidth=h).fit(Xr_train, yr_train)
     acc_tr_h = accuracy(yr_train, clf_real_parzen.predict(Xr_train))
@@ -289,6 +290,7 @@ for h in parzen_h_grid:
     acc_h = accuracy(yr_test, yr_pred_h)
     parzen_real_results[h] = (acc_tr_h, acc_h, clf_real_parzen)
     print(f"  h={h:>4}  {acc_h*100:>9.2f}%")
+    # Wybieramy najlepsze h na podstawie dokładności na zbiorze testowym
     if acc_h > best_acc_real:
         best_acc_real = acc_h
         best_h_real = h
@@ -352,6 +354,7 @@ real_models = [
     (f"Parzen h={best_h_real}", best_pred_real, "Oranges"),
 ]
 
+# Pętla po modelach do porównania
 for ax, (name, y_pred, cmap_name) in zip(axes, real_models):
     cm = confusion_matrix_2x2(yr_test, y_pred)
     acc = accuracy(yr_test, y_pred)

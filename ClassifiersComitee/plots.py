@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, ConfusionMatrixDisplay
 
 os.makedirs("plots", exist_ok=True)
 
@@ -65,7 +65,7 @@ def wykres_kandydatow(posortowani, Xtest, ytest, nazwa):
 # 3 - Wykres glosowan komitetow
 def wykres_komitetu(wyniki_komitetow, typ, tytul, nazwa, numer):
 
-    wiersze = sorted([(n, maj, waz, ada) for t, n, maj, waz, ada in wyniki_komitetow if t == typ])
+    wiersze = sorted([(n, maj, waz, ada) for t, n, maj, waz, ada, _, _, _ in wyniki_komitetow if t == typ])
     ns   = [w[0] for w in wiersze]
     majs = [w[1] for w in wiersze]
     wazs = [w[2] for w in wiersze]
@@ -83,6 +83,35 @@ def wykres_komitetu(wyniki_komitetow, typ, tytul, nazwa, numer):
     ax.legend(); ax.grid(alpha=0.4)
     fig.tight_layout()
     _zapisz(fig, f"{nazwa}_{numer}_{typ}.png")
+
+    wiersze_full = sorted([
+        (n, maj, waz, ada, y_maj, y_waz, y_ada)
+        for t, n, maj, waz, ada, y_maj, y_waz, y_ada in wyniki_komitetow
+        if t == typ
+    ])
+    if not wiersze_full:
+        return
+
+    rows = len(wiersze_full)
+    fig2, ax2 = plt.subplots(rows, 3, figsize=(15, 4 * rows))
+    ax2 = np.atleast_2d(ax2)
+
+    for i, (n, maj, waz, ada, y_maj, y_waz, y_ada) in enumerate(wiersze_full):
+        y_true_maj, y_pred_maj = y_maj
+        y_true_waz, y_pred_waz = y_waz
+        y_true_ada, y_pred_ada = y_ada
+
+        ConfusionMatrixDisplay.from_predictions(y_true_maj, y_pred_maj, ax=ax2[i, 0], cmap="Blues")
+        ax2[i, 0].set_title(f"N={n} majority")
+
+        ConfusionMatrixDisplay.from_predictions(y_true_waz, y_pred_waz, ax=ax2[i, 1], cmap="Blues")
+        ax2[i, 1].set_title(f"N={n} weighted")
+
+        ConfusionMatrixDisplay.from_predictions(y_true_ada, y_pred_ada, ax=ax2[i, 2], cmap="Blues")
+        ax2[i, 2].set_title(f"N={n} adaptive")
+
+    fig2.tight_layout()
+    _zapisz(fig2, f"{nazwa}_{numer}_{typ}_cm.png")
 
 # Zapis plikow
 def _zapisz(fig, nazwa_pliku):

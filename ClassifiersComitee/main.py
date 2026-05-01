@@ -40,20 +40,23 @@ def _rdzen(Xtr, ytr, Xval, yval, Xtest, ytest, nazwa):
  
         # 3a – ten sam klasyfikator (DecisionTree), różne dane uczące 
         czl, wag = komitet_bagging(N, Xtr, ytr, Xval, yval)
-        maj, waz, ada = ocen_komitet(czl, wag, Xval, yval, Xtest, ytest)
-        wyniki.append(("bagging", N, maj, waz, ada))
+        ocena_komitetu = ocen_komitet(czl, wag, Xval, yval, Xtest, ytest)
+        maj, waz, ada, y_maj, y_waz, y_ada = ocena_komitetu
+        wyniki.append(("bagging", N, maj, waz, ada, y_maj, y_waz, y_ada))
         print(f"    3a bagging     większość={maj:.3f}  ważone={waz:.3f}  adaptacyjne={ada:.3f}")
  
         # 3b – różne klasyfikatory, te same dane
         czl, wag = komitet_roznorodny(posortowani, N, Xtr, ytr, Xval, yval)
-        maj, waz, ada = ocen_komitet(czl, wag, Xval, yval, Xtest, ytest)
-        wyniki.append(("diverse", N, maj, waz, ada))
+        ocena_komitetu = ocen_komitet(czl, wag, Xval, yval, Xtest, ytest)
+        maj, waz, ada, y_maj, y_waz, y_ada = ocena_komitetu
+        wyniki.append(("diverse", N, maj, waz, ada, y_maj, y_waz, y_ada))
         print(f"    3b diverse     większość={maj:.3f}  ważone={waz:.3f}  adaptacyjne={ada:.3f}")
  
         # 3c – KNN z różnymi k, te same dane
         czl, wag = komitet_knn_param(N, Xtr, ytr, Xval, yval)
-        maj, waz, ada = ocen_komitet(czl, wag, Xval, yval, Xtest, ytest)
-        wyniki.append(("knn_param", N, maj, waz, ada))
+        ocena_komitetu = ocen_komitet(czl, wag, Xval, yval, Xtest, ytest)
+        maj, waz, ada, y_maj, y_waz, y_ada = ocena_komitetu
+        wyniki.append(("knn_param", N, maj, waz, ada, y_maj, y_waz, y_ada))
         print(f"    3c knn_param   większość={maj:.3f}  ważone={waz:.3f}  adaptacyjne={ada:.3f}")
  
     # Wykresy 3a / 3b / 3c 

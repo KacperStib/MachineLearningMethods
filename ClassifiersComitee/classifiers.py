@@ -166,4 +166,7 @@ def ocen_komitet(czlonkowie, wagi, Xval, yval, Xtest, ytest):
         accuracy_score(ytest, pred_maj),
         accuracy_score(ytest, pred_waz),
         accuracy_score(ytest, pred_ada),
+        (ytest, pred_maj),
+        (ytest, pred_waz),
+        (ytest, pred_ada)
     )

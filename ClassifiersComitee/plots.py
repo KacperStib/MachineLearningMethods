@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 
 os.makedirs("plots", exist_ok=True)
 
@@ -30,14 +30,15 @@ def wykres_kandydatow(posortowani, Xtest, ytest, nazwa):
     stala_kolejnosc = ["KNN-3", "KNN-5", "KNN-7", "Tree-3", "Tree-5", "SVM-0.5", "SVM-1", "Logistic"]
     slownik = {nk: (m, acc) for nk, m, acc in posortowani}
 
-    etykiety, acc_dobor, acc_test = [], [], []
+    etykiety, acc_dobor, acc_test, y_pred = [], [], [], []
     for nk in stala_kolejnosc:
         if nk not in slownik:
             continue
         m, acc = slownik[nk]
         etykiety.append(nk)
         acc_dobor.append(acc)
-        acc_test.append(accuracy_score(ytest, m.predict(Xtest)))
+        y_pred.append(m.predict(Xtest))
+        acc_test.append(accuracy_score(ytest, y_pred[-1]))
 
     x = np.arange(len(etykiety))
     fig, ax = plt.subplots(figsize=(8, 4))
@@ -50,6 +51,16 @@ def wykres_kandydatow(posortowani, Xtest, ytest, nazwa):
     ax.legend(); ax.grid(axis="y", alpha=0.4)
     fig.tight_layout()
     _zapisz(fig, f"{nazwa}_2_pojedyncze.png")
+
+    fig2, ax2 = plt.subplots(3, 3, figsize=(8, 6))
+    ax2 = ax2.flatten()
+    for i, (label, ypred) in enumerate(zip(etykiety, y_pred)):
+        ConfusionMatrixDisplay.from_predictions(ytest, ypred, ax=ax2[i], cmap="Blues")
+        ax2[i].set_title(label)
+    for j in range(len(etykiety), len(ax2)):
+        ax2[j].axis("off")
+    fig2.tight_layout()
+    _zapisz(fig2, f"{nazwa}_2_cm.png")
 
 # 3 - Wykres glosowan komitetow
 def wykres_komitetu(wyniki_komitetow, typ, tytul, nazwa, numer):

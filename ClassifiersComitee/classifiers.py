@@ -41,7 +41,8 @@ def ocen_kandydatow(Xtr, ytr, Xval, yval):
     wyniki = []
     for nazwa, model in kandydaci().items():
         m = clone(model).fit(Xtr, ytr)
-        acc = accuracy_score(yval, m.predict(Xval))
+        y_pred = m.predict(Xval)
+        acc = accuracy_score(yval, y_pred)
         wyniki.append((nazwa, m, acc))
     return sorted(wyniki, key=lambda t: t[2], reverse=True)
 

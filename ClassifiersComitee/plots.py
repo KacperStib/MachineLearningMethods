@@ -93,7 +93,8 @@ def wykres_komitetu(wyniki_komitetow, typ, tytul, nazwa, numer):
         return
 
     rows = len(wiersze_full)
-    fig2, ax2 = plt.subplots(rows, 3, figsize=(15, 4 * rows))
+    fig2, ax2 = plt.subplots(rows, 3, figsize=(8, 6))
+    fig2.suptitle(f"{tytul}\n({nazwa})")
     ax2 = np.atleast_2d(ax2)
 
     for i, (n, maj, waz, ada, y_maj, y_waz, y_ada) in enumerate(wiersze_full):
@@ -103,7 +104,7 @@ def wykres_komitetu(wyniki_komitetow, typ, tytul, nazwa, numer):
 
         ConfusionMatrixDisplay.from_predictions(y_true_maj, y_pred_maj, ax=ax2[i, 0], cmap="Blues")
         ax2[i, 0].set_title(f"N={n} majority")
-
+    
         ConfusionMatrixDisplay.from_predictions(y_true_waz, y_pred_waz, ax=ax2[i, 1], cmap="Blues")
         ax2[i, 1].set_title(f"N={n} weighted")
 

@@ -166,3 +166,37 @@ def plot_mean_errors_comparison(wyniki_mccv):
     plt.tight_layout()
     plt.savefig(os.path.join(PLOTS_DIR, "plot_mean_errors_comparison.png"), dpi=150)
     plt.show()
+
+def plot_mccv_boxplot_single(e1, e2, e3, title="ext_set"):
+    """
+    Boxplot rozkładu błędów MCCV dla jednego zbioru danych.
+    Używany gdy nie ma drugiego zbioru do porównania (np. ext_set w zadaniu 2).
+    """
+    fig, ax = plt.subplots(figsize=(8, 6))
+    fig.suptitle(f"Rozkład błędów klasyfikacji – MCCV ({len(e1)} iteracji)\n"
+                 f"Zbiór: {title}", fontsize=13, fontweight='bold')
+
+    colors = ['#E24B4A', '#EF9F27', '#2196A6']
+    labels = ['Scen. 1\nResubstytucja', 'Scen. 2\nLeaky holdout', 'Scen. 3\nPoprawny holdout']
+
+    bp = ax.boxplot([e1, e2, e3], patch_artist=True, widths=0.5,
+                    medianprops=dict(color='black', linewidth=2))
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.75)
+
+    ax.axhline(0.5, color='gray', linestyle='--', alpha=0.6, label='poziom losowy (0.5)')
+    ax.set_xticks([1, 2, 3])
+    ax.set_xticklabels(labels, fontsize=10)
+    ax.set_ylabel("Błąd klasyfikacji")
+    ax.set_ylim(-0.05, 1.05)
+    ax.legend(fontsize=9)
+    ax.grid(axis='y', alpha=0.3)
+
+    for i, err in enumerate([e1, e2, e3], 1):
+        ax.text(i, err.mean() + 0.03, f"{err.mean():.3f}",
+                ha='center', fontsize=9, color='black', fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(PLOTS_DIR, f"plot_mccv_boxplot_{title}.png"), dpi=150)
+    plt.show()

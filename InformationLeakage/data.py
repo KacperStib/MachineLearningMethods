@@ -14,6 +14,7 @@ from sklearn.neighbors import KNeighborsClassifier
 SET1_FILE        = "dane/S6_set1.csv"
 SET2_FILE        = "dane/S6_set2.csv"
 LABELS_FILE      = "dane/labels.csv"
+EXT_SET_FILE     = "dane/sonardata.csv"  # dodatkowy zbiór z 60 cechami i etykietami 'R'/'M'
 K_FEATURES       = 5
 K_NEIGHBORS      = 3
 TEST_SIZE        = 0.5
@@ -29,6 +30,21 @@ def load_dataset(data_file: str, labels_file: str = LABELS_FILE):
     y = pd.read_csv(labels_file, header=None).values.ravel()
     print(f"Załadowano: {data_file}")
     print(f"  Próbki : {X.shape[0]}  (klas 0: {(y==0).sum()}, klas 1: {(y==1).sum()})")
+    print(f"  Cechy  : {X.shape[1]}")
+    return X, y
+
+def load_dataset2(data_file: str):
+    """
+    Wczytuje dane z pliku sonardata.csv (60 cech + etykieta tekstowa 'R'/'M').
+    """
+    df = pd.read_csv(data_file, header=None)
+    X = df.iloc[:, :-1].values
+    y_raw = df.iloc[:, -1].values
+    # Konwersja etykiet tekstowych na numeryczne (np. R=0, M=1)
+    y = np.where(y_raw == 'R', 0, 1)
+    
+    print(f"Załadowano: {data_file}")
+    print(f"  Próbki : {X.shape[0]}  (klas 0 (R): {(y==0).sum()}, klas 1 (M): {(y==1).sum()})")
     print(f"  Cechy  : {X.shape[1]}")
     return X, y
 
